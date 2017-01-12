@@ -1,0 +1,33 @@
+#include<iostream>
+#include<unistd.h>
+#include<wiringPi.h>
+#include<iomanip>
+using namespace std;
+
+#define USING_DHT11      false   // The DHT11 uses only 8 bits
+#define DHT_GPIO         22      // Using GPIO 22 for this example
+#define LH_THRESHOLD     26      // Low=~14, High=~38 - pick avg.
+
+int main(){
+   int humid = 0, temp = 0;
+   cout << "Starting the one-wire sensor program" << endl;
+   wiringPiSetupGpio();
+   piHiPri(99);
+TRYAGAIN:                        // If checksum fails (come back here)
+   unsigned char data[5] = {0,0,0,0,0};
+   pinMode(DHT_GPIO, OUTPUT);                 // gpio starts as output
+   digitalWrite(DHT_GPIO, LOW);               // pull the line low
+   usleep(18000);                             // wait for 18ms
+   digitalWrite(DHT_GPIO, HIGH);              // set the line high
+   pinMode(DHT_GPIO, INPUT);                  // now gpio is an input
+
+   // need to ignore the first and second high after going low
+   do { delayMicroseconds(1); } while(digitalRead(DHT_GPIO)==HIGH);
+   do { delayMicroseconds(1); } while(digitalRead(DHT_GPIO)==LOW);
+   do { delayMicroseconds(1); } while(digitalRead(DHT_GPIO)==HIGH);
+   // Remember the highs, ignore the lows -- a good philosophy!
+   for(int d=0; d<5; d++) {       // for each data byte
+      // read 8 bits
+      for(int i=0; i<8; i++) {    // for each bit of data
+         do { delayMicroseconds(1); } while(digitalRead(DHT_GPIO)==LOW);
+         int width = 0;           // measure width of each high
